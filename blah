@@ -232,7 +232,7 @@
       "getgenv": {
           "label": "getgenv();",
           "type": "Method",
-          "description": "Returns the environment that will be applied to each script ran by salad.",
+          "description": "Returns the environment.",
           "insert": "getgenv"
       },
       "rconsoleprint": {
@@ -389,5 +389,5 @@
           "description": "Creates a new drawing object with type. Returns the object.",
           "insert": "Drawing.new"
       } 
-  }
+  },
 }

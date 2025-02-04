@@ -389,5 +389,5 @@
           "description": "Creates a new drawing object with type. Returns the object.",
           "insert": "Drawing.new"
       } 
-  },
+  }
 }

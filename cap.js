@@ -1,4 +1,4 @@
-// cap.js
+// cap.jsa
 (function(){
   function criarCaptcha(container) {
     // Estilo do quadrado

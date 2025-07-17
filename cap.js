@@ -1,52 +1,89 @@
-// click-captcha.js
 (function(){
-  function montarCaptcha(container) {
-    container.style.userSelect = 'none';
-    container.style.border = '2px solid #ccc';
-    container.style.width = '200px';
-    container.style.height = '50px';
-    container.style.lineHeight = '50px';
-    container.style.textAlign = 'center';
-    container.style.cursor = 'pointer';
-    container.style.fontFamily = 'Arial, sans-serif';
-    container.style.fontSize = '16px';
-    container.style.color = '#555';
-    container.textContent = 'Clique aqui para verificar';
+  // Variáveis internas
+  let movimentoMouse = 0;
+  let cliques = 0;
+  let teclado = 0;
+  let tempoInicio = Date.now();
+  let abaFocada = true;
 
-    let verificado = false;
+  // Monitoramento
+  window.addEventListener('mousemove', () => movimentoMouse++);
+  window.addEventListener('click', () => cliques++);
+  window.addEventListener('keydown', () => teclado++);
+  window.addEventListener('focus', () => abaFocada = true);
+  window.addEventListener('blur', () => abaFocada = false);
 
-    function onClick() {
-      verificado = true;
-      container.style.border = '2px solid #4CAF50';
-      container.style.backgroundColor = '#DFF2BF';
-      container.style.color = '#4CAF50';
-      container.textContent = 'Verificado ✓';
-      container.removeEventListener('click', onClick);
-    }
-
-    container.addEventListener('click', onClick);
-
-    return {
-      validar: () => verificado,
-      reset: () => {
-        verificado = false;
-        container.style.border = '2px solid #ccc';
-        container.style.backgroundColor = 'transparent';
-        container.style.color = '#555';
-        container.textContent = 'Clique aqui para verificar';
-        container.addEventListener('click', onClick);
-      }
-    };
+  // Função que avalia risco
+  function avaliarRisco() {
+    const tempoAtivo = (Date.now() - tempoInicio) / 1000;
+    if (!abaFocada) return 'alto';
+    if (tempoAtivo < 2 && movimentoMouse < 5 && cliques < 1) return 'alto';
+    if (tempoAtivo < 5 && movimentoMouse < 10) return 'medio';
+    return 'baixo';
   }
 
-  window.clickCaptcha = {
-    init: (selector) => {
+  // Gera token base64 com dados
+  function gerarToken() {
+    return btoa(JSON.stringify({
+      movimentoMouse,
+      cliques,
+      teclado,
+      tempoAtivo: (Date.now() - tempoInicio) / 1000,
+      abaFocada,
+      risco: avaliarRisco()
+    }));
+  }
+
+  // Interface pública
+  window.meuCaptcha = {
+    init: function(selector) {
       const container = document.querySelector(selector);
       if(!container) {
-        console.error('Container não encontrado: ' + selector);
+        console.error('Container não encontrado');
         return null;
       }
-      return montarCaptcha(container);
+
+      // Criar desafio se necessário
+      let desafioResolvido = false;
+
+      function mostrarDesafio() {
+        const a = Math.floor(Math.random()*10)+1;
+        const b = Math.floor(Math.random()*10)+1;
+        const soma = a+b;
+
+        container.innerHTML = `
+          <label>Resolva para continuar: ${a} + ${b} = 
+            <input type="number" id="captcha-input" />
+          </label>
+          <div id="msg-erro" style="color:red; display:none;">Resposta incorreta.</div>
+        `;
+
+        const input = container.querySelector('#captcha-input');
+        const msgErro = container.querySelector('#msg-erro');
+
+        input.addEventListener('input', () => {
+          if(parseInt(input.value) === soma) {
+            desafioResolvido = true;
+            msgErro.style.display = 'none';
+          } else {
+            desafioResolvido = false;
+            msgErro.style.display = 'inline';
+          }
+        });
+      }
+
+      // Decide se mostra desafio ou não
+      if(avaliarRisco() === 'baixo') {
+        container.textContent = 'Captcha validado invisível.';
+        desafioResolvido = true;
+      } else {
+        mostrarDesafio();
+      }
+
+      return {
+        validar: () => desafioResolvido,
+        getToken: () => gerarToken()
+      };
     }
   };
 })();

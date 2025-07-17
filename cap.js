@@ -1,5 +1,7 @@
+// cap.js
 (function(){
   function criarCaptcha(container) {
+    // Estilo do quadrado
     container.style.userSelect = 'none';
     container.style.border = '2px solid #aaa';
     container.style.width = '200px';
@@ -10,41 +12,46 @@
     container.style.fontFamily = 'Arial, sans-serif';
     container.style.fontSize = '16px';
     container.style.color = '#444';
-    container.textContent = 'Clique aqui para verificar';
+    container.textContent = 'Clique na caixa para verificar';
 
     let verificado = false;
     let timestamp = null;
 
-    // Variáveis para os testes
+    // Variáveis para testes básicos
     let movimentoMouse = 0;
     let teclasPressionadas = 0;
     let abaFocada = true;
     const tempoInicio = Date.now();
 
-    // Monitorar comportamento
+    // Monitora movimento do mouse
     window.addEventListener('mousemove', () => movimentoMouse++);
+    // Monitora teclas pressionadas
     window.addEventListener('keydown', () => teclasPressionadas++);
+    // Monitora foco da aba
     window.addEventListener('focus', () => abaFocada = true);
     window.addEventListener('blur', () => abaFocada = false);
 
-    // Função que valida se comportamento é ok
+    // Função para validar comportamento antes do clique
     function comportamentoValido() {
       const tempoAtivo = (Date.now() - tempoInicio) / 1000;
-      if(!abaFocada) return false;                // aba precisa estar focada
-      if(tempoAtivo < 1) return false;            // tempo mínimo na página
-      if(movimentoMouse < 2) return false;        // mouse precisa ter se movido pelo menos 2x
-      // teclas não obrigatórias, mas somam para confiança
+      if (!abaFocada) return false;
+      if (tempoAtivo < 1) return false;
+      if (movimentoMouse < 3) return false;
+      // teclasPressionadas não obrigatório, só reforça
       return true;
     }
 
     container.addEventListener('click', () => {
-      if(verificado) return;
+      if(verificado) return; // já clicado e validado
+
       if(!comportamentoValido()) {
-        alert('Por favor, interaja com a página antes de clicar no captcha.');
+        alert('Por favor, interaja um pouco mais com a página antes de clicar na caixa.');
         return;
       }
+
       verificado = true;
       timestamp = Date.now();
+
       container.style.border = '2px solid #4CAF50';
       container.style.backgroundColor = '#DFF2BF';
       container.style.color = '#4CAF50';

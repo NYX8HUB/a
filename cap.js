@@ -1,74 +1,94 @@
-// meu-captcha.js
+// meu-turnstile.js
 (function(){
-  const containerClass = 'meu-captcha-container';
-  const widgetClass = 'meu-captcha-widget';
+  const containerClass = 'meu-turnstile-container';
+  const widgetClass = 'meu-turnstile-widget';
 
-  // Gera um desafio simples (soma)
-  function gerarDesafio() {
-    const a = Math.floor(Math.random() * 10) + 1;
-    const b = Math.floor(Math.random() * 10) + 1;
-    return { a, b, resultado: a + b };
+  let movimentoMouse = 0;
+  let cliques = 0;
+  let teclado = 0;
+  let tempoInicio = Date.now();
+
+  // Monitoramento invisível
+  function monitorarComportamento() {
+    document.addEventListener('mousemove', () => movimentoMouse++);
+    document.addEventListener('click', () => cliques++);
+    document.addEventListener('keydown', () => teclado++);
   }
 
-  // Codifica token (resultado + timestamp)
-  function gerarToken(resultado) {
-    const data = JSON.stringify({ resultado, ts: Date.now() });
-    return btoa(data);
+  // Heurística simples para suspeita
+  function avaliarRisco() {
+    const tempoAtivo = (Date.now() - tempoInicio) / 1000;
+    // Se pouco movimento e muito rápido, suspeito
+    if(tempoAtivo < 2 && movimentoMouse < 5 && cliques < 1) return 'alto';
+    if(tempoAtivo < 5 && movimentoMouse < 10) return 'medio';
+    return 'baixo';
   }
 
-  // Decodifica token
-  function decodificarToken(token) {
-    try {
-      return JSON.parse(atob(token));
-    } catch {
-      return null;
-    }
+  // Gerar token baseado nos dados coletados
+  function gerarToken() {
+    const dados = {
+      movimentoMouse,
+      cliques,
+      teclado,
+      tempoAtivo: (Date.now() - tempoInicio) / 1000,
+      risco: avaliarRisco()
+    };
+    return btoa(JSON.stringify(dados));
   }
 
-  // Monta o widget
+  // Montar o widget (invisível, só mostra se risco médio/alto)
   function montarWidget(container) {
-    const desafio = gerarDesafio();
-    container.innerHTML = `
-      <label>Resolva: <strong>${desafio.a} + ${desafio.b}</strong> = 
-        <input type="number" class="meu-captcha-input" required>
-      </label>
-      <input type="hidden" class="meu-captcha-token" value="${gerarToken(desafio.resultado)}">
-      <span class="meu-captcha-msg" style="color:red; display:none; margin-left:10px;"></span>
-    `;
+    monitorarComportamento();
 
-    const input = container.querySelector('.meu-captcha-input');
-    const tokenInput = container.querySelector('.meu-captcha-token');
-    const msg = container.querySelector('.meu-captcha-msg');
+    const challengeContainer = document.createElement('div');
+    challengeContainer.style.marginTop = '10px';
 
-    function validar() {
-      const valor = parseInt(input.value);
-      const tokenData = decodificarToken(tokenInput.value);
+    const inputResposta = document.createElement('input');
+    inputResposta.type = 'number';
+    inputResposta.style.display = 'none';
 
-      if(!tokenData) {
-        msg.textContent = 'Token inválido.';
-        msg.style.display = 'inline';
-        return false;
-      }
+    const desafioLabel = document.createElement('label');
+    desafioLabel.style.display = 'none';
 
-      if(valor !== tokenData.resultado) {
-        msg.textContent = 'Resposta incorreta.';
-        msg.style.display = 'inline';
-        return false;
-      }
+    let desafioValor;
 
-      msg.style.display = 'none';
-      return true;
+    function montarDesafio() {
+      const a = Math.floor(Math.random() * 10) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      desafioValor = a + b;
+      desafioLabel.textContent = `Para continuar, resolva: ${a} + ${b} = `;
+      desafioLabel.appendChild(inputResposta);
+      desafioLabel.style.display = 'inline-block';
+      inputResposta.style.display = 'inline-block';
+      inputResposta.value = '';
+      inputResposta.focus();
     }
 
-    input.addEventListener('input', validar);
+    container.appendChild(challengeContainer);
+    container.appendChild(desafioLabel);
 
     return {
-      validar
+      validar: () => {
+        const risco = avaliarRisco();
+        if(risco === 'baixo') {
+          // comportamento bom, sem desafio
+          return true;
+        }
+        // risco médio ou alto, desafio obrigatório
+        const resposta = parseInt(inputResposta.value);
+        if(resposta !== desafioValor) {
+          alert('Por favor, resolva o desafio para provar que você é humano.');
+          montarDesafio();
+          return false;
+        }
+        return true;
+      },
+      getToken: () => gerarToken()
     };
   }
 
-  // Exporta função global para inicializar o captcha
-  window.meuCaptcha = {
+  // Exporta global
+  window.meuTurnstile = {
     init: function(selector) {
       const container = document.querySelector(selector);
       if(!container) {

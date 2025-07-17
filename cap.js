@@ -1,89 +1,80 @@
 (function(){
-  // Variáveis internas
-  let movimentoMouse = 0;
-  let cliques = 0;
-  let teclado = 0;
-  let tempoInicio = Date.now();
-  let abaFocada = true;
+  function criarCaptcha(container) {
+    container.style.userSelect = 'none';
+    container.style.border = '2px solid #aaa';
+    container.style.width = '200px';
+    container.style.height = '50px';
+    container.style.lineHeight = '50px';
+    container.style.textAlign = 'center';
+    container.style.cursor = 'pointer';
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.fontSize = '16px';
+    container.style.color = '#444';
+    container.textContent = 'Clique aqui para verificar';
 
-  // Monitoramento
-  window.addEventListener('mousemove', () => movimentoMouse++);
-  window.addEventListener('click', () => cliques++);
-  window.addEventListener('keydown', () => teclado++);
-  window.addEventListener('focus', () => abaFocada = true);
-  window.addEventListener('blur', () => abaFocada = false);
+    let verificado = false;
+    let timestamp = null;
 
-  // Função que avalia risco
-  function avaliarRisco() {
-    const tempoAtivo = (Date.now() - tempoInicio) / 1000;
-    if (!abaFocada) return 'alto';
-    if (tempoAtivo < 2 && movimentoMouse < 5 && cliques < 1) return 'alto';
-    if (tempoAtivo < 5 && movimentoMouse < 10) return 'medio';
-    return 'baixo';
+    // Variáveis para os testes
+    let movimentoMouse = 0;
+    let teclasPressionadas = 0;
+    let abaFocada = true;
+    const tempoInicio = Date.now();
+
+    // Monitorar comportamento
+    window.addEventListener('mousemove', () => movimentoMouse++);
+    window.addEventListener('keydown', () => teclasPressionadas++);
+    window.addEventListener('focus', () => abaFocada = true);
+    window.addEventListener('blur', () => abaFocada = false);
+
+    // Função que valida se comportamento é ok
+    function comportamentoValido() {
+      const tempoAtivo = (Date.now() - tempoInicio) / 1000;
+      if(!abaFocada) return false;                // aba precisa estar focada
+      if(tempoAtivo < 1) return false;            // tempo mínimo na página
+      if(movimentoMouse < 2) return false;        // mouse precisa ter se movido pelo menos 2x
+      // teclas não obrigatórias, mas somam para confiança
+      return true;
+    }
+
+    container.addEventListener('click', () => {
+      if(verificado) return;
+      if(!comportamentoValido()) {
+        alert('Por favor, interaja com a página antes de clicar no captcha.');
+        return;
+      }
+      verificado = true;
+      timestamp = Date.now();
+      container.style.border = '2px solid #4CAF50';
+      container.style.backgroundColor = '#DFF2BF';
+      container.style.color = '#4CAF50';
+      container.textContent = 'Verificado ✓';
+    });
+
+    return {
+      validar: () => verificado,
+      getToken: () => {
+        if(!verificado) return null;
+        return btoa(JSON.stringify({
+          verificado: true,
+          ts: timestamp,
+          movimentoMouse,
+          teclasPressionadas,
+          tempoAtivo: (Date.now() - tempoInicio) / 1000,
+          abaFocada
+        }));
+      }
+    };
   }
 
-  // Gera token base64 com dados
-  function gerarToken() {
-    return btoa(JSON.stringify({
-      movimentoMouse,
-      cliques,
-      teclado,
-      tempoAtivo: (Date.now() - tempoInicio) / 1000,
-      abaFocada,
-      risco: avaliarRisco()
-    }));
-  }
-
-  // Interface pública
   window.meuCaptcha = {
     init: function(selector) {
       const container = document.querySelector(selector);
       if(!container) {
-        console.error('Container não encontrado');
+        console.error('Container não encontrado: ' + selector);
         return null;
       }
-
-      // Criar desafio se necessário
-      let desafioResolvido = false;
-
-      function mostrarDesafio() {
-        const a = Math.floor(Math.random()*10)+1;
-        const b = Math.floor(Math.random()*10)+1;
-        const soma = a+b;
-
-        container.innerHTML = `
-          <label>Resolva para continuar: ${a} + ${b} = 
-            <input type="number" id="captcha-input" />
-          </label>
-          <div id="msg-erro" style="color:red; display:none;">Resposta incorreta.</div>
-        `;
-
-        const input = container.querySelector('#captcha-input');
-        const msgErro = container.querySelector('#msg-erro');
-
-        input.addEventListener('input', () => {
-          if(parseInt(input.value) === soma) {
-            desafioResolvido = true;
-            msgErro.style.display = 'none';
-          } else {
-            desafioResolvido = false;
-            msgErro.style.display = 'inline';
-          }
-        });
-      }
-
-      // Decide se mostra desafio ou não
-      if(avaliarRisco() === 'baixo') {
-        container.textContent = 'Captcha validado invisível.';
-        desafioResolvido = true;
-      } else {
-        mostrarDesafio();
-      }
-
-      return {
-        validar: () => desafioResolvido,
-        getToken: () => gerarToken()
-      };
+      return criarCaptcha(container);
     }
   };
 })();

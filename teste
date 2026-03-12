@@ -144,7 +144,7 @@ function loadshyscript()
         elseif _PlaceId == 623823800 then
             Third_Sea = true
         else
-            game:Shutdown()
+            First_Sea = true
         end
 
         spawn(function()
@@ -185,59 +185,29 @@ function loadshyscript()
                 return p83
             end
         end
-        if setreadonly and (getrawmetatable and newcclosure) then
-            assert(getrawmetatable)
-
-            grm = getrawmetatable(game)
-
+        if setreadonly and getrawmetatable and newcclosure then
+            local grm = getrawmetatable(game)
             setreadonly(grm, false)
-
-            old = grm.__namecall
-            grm.__namecall = newcclosure(function(p90, ...)
-                local v91 = {...}
-
-                if tostring(v91[1]) ~= 'TeleportDetect' then
-                    if tostring(v91[1]) ~= 'CHECKER_1' then
-                        if tostring(v91[1]) ~= 'CHECKER' then
-                            if tostring(v91[1]) ~= 'GUI_CHECK' then
-                                if tostring(v91[1]) ~= 'OneMoreTime' then
-                                    if tostring(v91[1]) ~= 'checkingSPEED' then
-                                        if tostring(v91[1]) ~= 'BANREMOTE' then
-                                            if tostring(v91[1]) ~= 'PERMAIDBAN' then
-                                                if tostring(v91[1]) ~= 'KICKREMOTE' then
-                                                    if tostring(v91[1]) ~= 'BR_KICKPC' then
-                                                        if tostring(v91[1]) ~= 'BR_KICKMOBILE' then
-                                                            return old(p90, ...)
-                                                        end
-                                                    end
-                                                else
-                                                    return
-                                                end
-                                            else
-                                                return
-                                            end
-                                        else
-                                            return
-                                        end
-                                    else
-                                        return
-                                    end
-                                else
-                                    return
-                                end
-                            else
-                                return
-                            end
-                        else
-                            return
-                        end
-                    else
-                        return
+            local old = grm.__namecall
+            
+            grm.__namecall = newcclosure(function(self, ...)
+                local method = getnamecallmethod()
+                if method == "FireServer" or method == "InvokeServer" then
+                    local args = {...}
+                    local a1 = tostring(args[1])
+                    local blocked = {
+                        ["TeleportDetect"] = true, ["CHECKER_1"] = true, ["CHECKER"] = true,
+                        ["GUI_CHECK"] = true, ["OneMoreTime"] = true, ["checkingSPEED"] = true,
+                        ["BANREMOTE"] = true, ["PERMAIDBAN"] = true, ["KICKREMOTE"] = true,
+                        ["BR_KICKPC"] = true, ["BR_KICKMOBILE"] = true
+                    }
+                    if blocked[a1] then
+                        return nil
                     end
-                else
-                    return
                 end
+                return old(self, ...)
             end)
+            setreadonly(grm, true)
         end
 
         spawn(function()
@@ -3043,27 +3013,26 @@ function loadshyscript()
         end
 
         spawn(function()
-            if setreadonly and (getrawmetatable and newcclosure) then
+            if setreadonly and getrawmetatable and newcclosure then
                 local v324 = getrawmetatable(game)
                 local ___namecall = v324.__namecall
-
                 setreadonly(v324, false)
-
-                v324.__namecall = newcclosure(function(...)
-                    local v326 = getnamecallmethod()
-                    local v327 = {...}
-
-                    if tostring(v326) ~= 'FireServer' or (tostring(v327[1]) ~= 'RemoteEvent' or (tostring(v327[2]) == 'true' or (tostring(v327[2]) == 'false' or not (getgenv().UseSkill or getgenv().USeSkilll)))) then
-                        return ___namecall(...)
+                v324.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    if method == 'FireServer' and (getgenv().UseSkill or getgenv().USeSkilll) then
+                        local args = {...}
+                        if tostring(args[1]) == 'RemoteEvent' and tostring(args[2]) ~= 'true' and tostring(args[2]) ~= 'false' then
+                            if typeof(args[2]) ~= 'Vector3' and typeof(args[2]) ~= 'CFrame' then
+                                args[2] = CFrame.new(PositionSkillMasteryDevilFruit)
+                            else
+                                args[2] = PositionSkillMasteryDevilFruit
+                            end
+                            return ___namecall(self, unpack(args))
+                        end
                     end
-                    if type(v327[2]) ~= 'vector' then
-                        v327[2] = CFrame.new(PositionSkillMasteryDevilFruit)
-                    else
-                        v327[2] = PositionSkillMasteryDevilFruit
-                    end
-
-                    return ___namecall(unpack(v327))
+                    return ___namecall(self, ...)
                 end)
+                setreadonly(v324, true)
             end
         end)
         spawn(function()
